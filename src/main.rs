@@ -23,6 +23,17 @@ fn main() {
     let a3 = z2.dot(&w3) + b3;
 
     println!("{:?}", a3);
+
+    let a: Array1<f64> = arr1(&[0.3, 2.9, 4.0]);
+    println!("{:?}", softmax(&a));
+}
+
+fn softmax(a: &Array1<f64>) -> Array1<f64> {
+    let c = max(a).unwrap();
+    let a = a - c;
+    let exp_a: Array1<f64> = a.iter().map(|e| e.exp()).collect();
+    let sum_exp_a: f64 = exp_a.iter().sum();
+    exp_a / sum_exp_a
 }
 
 fn and(x1: f64, x2: f64) -> bool {
@@ -62,5 +73,19 @@ fn relu(x: f64) -> f64 {
         x
     } else {
         0.0
+    }
+}
+
+fn max(a: &Array1<f64>) -> Option<f64> {
+    if a.len() == 0 {
+        None
+    } else {
+        let mut result = a[0];
+        for &a in a.iter() {
+            if a > result {
+                result = a;
+            }
+        }
+        Some(result)
     }
 }
