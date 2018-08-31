@@ -5,7 +5,7 @@ extern crate rand;
 
 use deep_learning_study_rust::mnist;
 use ndarray::prelude::*;
-use ndarray::{Array, Slice};
+use ndarray::Array;
 use ndarray_rand::RandomExt;
 use rand::distributions::Normal;
 use rand::{thread_rng, Rng};
@@ -66,7 +66,6 @@ fn main() {
         network.w2 = network.w2 - grad.w2 * learning_rate;
         network.b2 = network.b2 - grad.b2 * learning_rate;
 
-        let loss = network.loss(&x_batch, &t_batch);
         if i % iter_per_epoch == 0 {
             let train_acc = network.accuracy(&x_train, &t_train);
             let test_acc = network.accuracy(&x_test, &t_test);
