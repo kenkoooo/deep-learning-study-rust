@@ -33,11 +33,13 @@ fn label_to_one_hot(t: &Vec<u8>) -> Array2<f64> {
     result
 }
 
-fn train() {
+fn main() {
     // chapter 04
     let (x_train, t_train) = get_train_data();
     let t_train = label_to_one_hot(&t_train);
-    println!("train data loaded");
+
+    let (x_test, t_test) = get_test_data();
+    let t_test = label_to_one_hot(&t_test);
 
     // hyper parameters
     let iters_num = 10000;
@@ -67,14 +69,10 @@ fn train() {
         let loss = network.loss(&x_batch, &t_batch);
         if i % iter_per_epoch == 0 {
             let train_acc = network.accuracy(&x_train, &t_train);
-            println!("{}", loss);
-            println!("train acc, test acc | {}", train_acc);
+            let test_acc = network.accuracy(&x_test, &t_test);
+            println!("train acc, test acc | {} {}", train_acc, test_acc);
         }
     }
-}
-
-fn main() {
-    train();
 }
 
 fn masked_copy<S: ndarray::Data<Elem = f64>>(
@@ -130,9 +128,9 @@ impl TwoLayerNet {
     ) -> Self {
         TwoLayerNet {
             w1: Array::random((input_size, hidden_size), Normal::new(0.0, 1.0)) * weight_init_std,
-            b1: Array::<f64, _>::zeros(hidden_size),
+            b1: Array::zeros(hidden_size),
             w2: Array::random((hidden_size, output_size), Normal::new(0.0, 1.0)) * weight_init_std,
-            b2: Array::<f64, _>::zeros(output_size),
+            b2: Array::zeros(output_size),
         }
     }
 
@@ -194,16 +192,21 @@ impl TwoLayerNet {
         let y = softmax(&a2);
 
         // backward
-        let dy = (y - t) / batch_num as f64;
-        let w2 = z1.t().dot(&dy);
-        let b2 = dy.sum_axis(Axis(0));
+        let dy = (y - t) / (batch_num as f64);
+        let g_w2 = z1.t().dot(&dy);
+        let g_b2 = dy.sum_axis(Axis(0));
 
-        let dz1 = dy.dot(&w2.t());
+        let dz1 = dy.dot(&self.w2.t());
         let da1 = sigmoid_grad(&a1) * dz1;
-        let w1 = x.t().dot(&da1);
-        let b1 = da1.sum_axis(Axis(0));
+        let g_w1 = x.t().dot(&da1);
+        let g_b1 = da1.sum_axis(Axis(0));
 
-        TwoLayerNet { b1, b2, w1, w2 }
+        TwoLayerNet {
+            b1: g_b1,
+            b2: g_b2,
+            w1: g_w1,
+            w2: g_w2,
+        }
     }
 }
 
@@ -238,7 +241,7 @@ where
     let mut y = Array::zeros(d);
     for i in 0..n {
         let max_scalar = max(&x.row(i)).unwrap();
-        let exp = x.row(i).mapv(|f| f - max_scalar).mapv(f64::exp);
+        let exp = x.row(i).mapv(|f| (f - max_scalar).exp());
         let sum = exp.scalar_sum();
         y.row_mut(i).assign(&(exp / sum));
     }
@@ -250,7 +253,7 @@ where
     S: ndarray::Data<Elem = f64>,
     D: ndarray::Dimension,
 {
-    1.0 / ((-x).mapv(f64::exp) + 1.0)
+    1.0 / x.mapv(|f| (-f).exp() + 1.0)
 }
 
 fn max<S, D>(a: &ArrayBase<S, D>) -> Option<f64>
