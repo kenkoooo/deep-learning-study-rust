@@ -5,14 +5,16 @@ extern crate rand;
 
 use deep_learning_study_rust::functions::*;
 use deep_learning_study_rust::mnist;
+use deep_learning_study_rust::two_layer_net::{Gradient, TwoLayerNetInterface};
+use deep_learning_study_rust::utils::{choice, ArrayChoiceCopy};
+
 use ndarray::prelude::*;
 use ndarray::Array;
 use ndarray_rand::RandomExt;
 use rand::distributions::Normal;
-use rand::{thread_rng, Rng};
+use rand::thread_rng;
 
 use std::cmp;
-use std::collections::BTreeSet;
 
 fn main() {
     let (x_train, t_train, x_test, t_test) = mnist::load_data().unwrap();
@@ -49,50 +51,6 @@ fn main() {
     }
 }
 
-trait ArrayChoiceCopy<S> {
-    fn masked_copy(&self, mask: &Vec<usize>) -> ArrayBase<ndarray::OwnedRepr<f64>, Ix2>;
-}
-
-impl<S> ArrayChoiceCopy<S> for ArrayBase<S, Ix2>
-where
-    S: ndarray::Data<Elem = f64>,
-{
-    fn masked_copy(&self, mask: &Vec<usize>) -> ArrayBase<ndarray::OwnedRepr<f64>, Ix2> {
-        let m = mask.len();
-        let cols = self.shape()[1];
-        let mut result = Array::zeros((m, cols));
-        for row in 0..m {
-            result.row_mut(row).assign(&self.row(mask[row]));
-        }
-        result
-    }
-}
-
-fn choice<R: Rng>(rng: &mut R, from_size: usize, choice_size: usize) -> Vec<usize> {
-    let mut selected = BTreeSet::new();
-    let select_fewer = from_size > choice_size * 2;
-    let choice_size = cmp::min(from_size, choice_size);
-    let choice_size = if select_fewer {
-        choice_size
-    } else {
-        from_size - choice_size
-    };
-    while selected.len() < choice_size {
-        selected.insert(rng.gen_range(0, from_size));
-    }
-    if select_fewer {
-        selected.iter().map(|&c| c).collect()
-    } else {
-        let mut result = vec![];
-        for i in 0..from_size {
-            if !selected.contains(&i) {
-                result.push(i);
-            }
-        }
-        result
-    }
-}
-
 pub struct TwoLayerNet {
     w1: Array2<f64>,
     b1: Array1<f64>,
@@ -114,9 +72,20 @@ impl TwoLayerNet {
             b2: Array::zeros(output_size),
         }
     }
+}
+
+impl TwoLayerNetInterface for TwoLayerNet {
+    fn loss<S: ndarray::Data<Elem = f64>>(
+        &mut self,
+        x: &ArrayBase<S, Ix2>,
+        t: &ArrayBase<S, Ix2>,
+    ) -> f64 {
+        let y = self.predict(x);
+        cross_entropy_error(&y, t)
+    }
 
     fn predict<S: ndarray::Data<Elem = f64>>(
-        &self,
+        &mut self,
         x: &ArrayBase<S, Ix2>,
     ) -> ArrayBase<ndarray::OwnedRepr<f64>, Ix2> {
         let a1 = x.dot(&self.w1) + &self.b1;
@@ -126,44 +95,11 @@ impl TwoLayerNet {
         y
     }
 
-    fn loss<S: ndarray::Data<Elem = f64>>(
-        &self,
-        x: &ArrayBase<S, Ix2>,
-        t: &ArrayBase<S, Ix2>,
-    ) -> f64 {
-        let y = self.predict(x);
-        cross_entropy_error(&y, t)
-    }
-
-    fn accuracy(&self, x: &Array2<f64>, t: &Array2<f64>) -> f64 {
-        let argmax = |x: &ArrayView1<f64>| {
-            let mut i = 0;
-            assert!(x.len() > 0);
-            for j in 1..x.len() {
-                if x[j] > x[i] {
-                    i = j;
-                }
-            }
-            i
-        };
-        let y = self.predict(x);
-        assert_eq!(t.rows(), y.rows());
-        let n = y.rows();
-
-        let mut sum = 0;
-        for i in 0..n {
-            if argmax(&y.row(i)) == argmax(&t.row(i)) {
-                sum += 1;
-            }
-        }
-        sum as f64 / x.shape()[0] as f64
-    }
-
     fn gradient<S: ndarray::Data<Elem = f64>>(
-        &self,
+        &mut self,
         x: &ArrayBase<S, Ix2>,
         t: &ArrayBase<S, Ix2>,
-    ) -> TwoLayerNet {
+    ) -> Gradient {
         let batch_num = x.shape()[0];
 
         // forward
@@ -182,7 +118,7 @@ impl TwoLayerNet {
         let g_w1 = x.t().dot(&da1);
         let g_b1 = da1.sum_axis(Axis(0));
 
-        TwoLayerNet {
+        Gradient {
             b1: g_b1,
             b2: g_b2,
             w1: g_w1,

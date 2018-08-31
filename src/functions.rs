@@ -23,7 +23,7 @@ pub fn log<S: Data<Elem = f64>>(a: &ArrayBase<S, Ix2>) -> ArrayBase<OwnedRepr<f6
 
 pub fn softmax<S>(x: &ArrayBase<S, Ix2>) -> ArrayBase<OwnedRepr<f64>, Ix2>
 where
-    S: Data<Elem = f64> + DataMut,
+    S: Data<Elem = f64>,
 {
     let n = x.rows();
     let d = x.raw_dim();
