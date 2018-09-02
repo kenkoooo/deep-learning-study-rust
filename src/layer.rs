@@ -1,6 +1,10 @@
 use functions::{cross_entropy_error, softmax};
-use ndarray::{Array, ArrayBase, Axis, Data, DataMut, Dimension, Ix1, Ix2, OwnedRepr};
+use ndarray::{
+    Array, Array1, Array2, ArrayBase, Axis, Data, DataMut, Dimension, Ix1, Ix2, OwnedRepr,
+};
 use num_traits;
+
+use std::rc::Rc;
 
 pub struct MulLayer<T> {
     x: T,
@@ -91,41 +95,38 @@ impl Sigmoid {
 }
 
 pub struct Affine {
-    w: ArrayBase<OwnedRepr<f64>, Ix2>,
-    b: ArrayBase<OwnedRepr<f64>, Ix1>,
-    x: ArrayBase<OwnedRepr<f64>, Ix2>,
-    pub dw: ArrayBase<OwnedRepr<f64>, Ix2>,
-    pub db: ArrayBase<OwnedRepr<f64>, Ix1>,
+    x: Array2<f64>,
+    pub dw: Array2<f64>,
+    pub db: Array1<f64>,
 }
 
 impl Affine {
-    pub fn new<S: Data<Elem = f64>>(w: &ArrayBase<S, Ix2>, b: &ArrayBase<S, Ix1>) -> Self {
-        let mut tw = Array::zeros(w.raw_dim());
-        let mut tb = Array::zeros(b.raw_dim());
-        tw.assign(w);
-        tb.assign(b);
+    pub fn new(w: &Array2<f64>, b: &Array1<f64>) -> Self {
+        let dw = Array::zeros(w.raw_dim());
+        let db = Array::zeros(b.raw_dim());
         Affine {
-            w: tw,
-            b: tb,
-            x: Array::zeros(w.raw_dim()),
-            dw: Array::zeros(w.raw_dim()),
-            db: Array::zeros(b.raw_dim()),
+            x: Array::zeros((0, 0)),
+            dw: dw,
+            db: db,
         }
     }
 
-    pub fn forward<S: Data<Elem = f64>>(
+    pub fn forward<S: Data<Elem = f64>, T: Data<Elem = f64>, U: Data<Elem = f64>>(
         &mut self,
-        x: &ArrayBase<S, Ix2>,
+        w: &ArrayBase<S, Ix2>,
+        b: &ArrayBase<T, Ix1>,
+        x: &ArrayBase<U, Ix2>,
     ) -> ArrayBase<OwnedRepr<f64>, Ix2> {
-        self.x.assign(x);
-        x.dot(&self.w) + &self.b
+        self.x = x * 1.0;
+        x.dot(w) + b
     }
 
-    pub fn backward<S: Data<Elem = f64>>(
+    pub fn backward<S: Data<Elem = f64>, T: Data<Elem = f64>>(
         &mut self,
-        d_out: &ArrayBase<S, Ix2>,
+        w: &ArrayBase<S, Ix2>,
+        d_out: &ArrayBase<T, Ix2>,
     ) -> ArrayBase<OwnedRepr<f64>, Ix2> {
-        let dx = d_out.dot(&self.w.t());
+        let dx = d_out.dot(&w.t());
         self.dw.assign(&self.x.t().dot(d_out));
         self.db.assign(&d_out.sum_axis(Axis(0)));
         dx

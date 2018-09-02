@@ -57,3 +57,26 @@ where
     }
     result
 }
+
+pub fn accuracy(y: &Array2<f64>, t: &Array2<f64>) -> f64 {
+    let argmax = |x: &ArrayView1<f64>| {
+        let mut i = 0;
+        assert!(x.len() > 0);
+        for j in 1..x.len() {
+            if x[j] > x[i] {
+                i = j;
+            }
+        }
+        i
+    };
+    assert_eq!(t.rows(), y.rows());
+    let n = y.rows();
+
+    let mut sum = 0;
+    for i in 0..n {
+        if argmax(&y.row(i)) == argmax(&t.row(i)) {
+            sum += 1;
+        }
+    }
+    sum as f64 / t.shape()[0] as f64
+}
