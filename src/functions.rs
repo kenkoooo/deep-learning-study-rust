@@ -1,5 +1,5 @@
 use ndarray::prelude::*;
-use ndarray::{Array, Data, DataMut, Dimension, OwnedRepr};
+use ndarray::{Array, ArrayBase, Data, DataMut, Dimension, Ix2, OwnedRepr};
 
 pub fn sigmoid_grad<S, D>(x: &ArrayBase<S, D>) -> ArrayBase<OwnedRepr<f64>, D>
 where
@@ -58,7 +58,10 @@ where
     result
 }
 
-pub fn accuracy(y: &Array2<f64>, t: &Array2<f64>) -> f64 {
+pub fn accuracy<S: Data<Elem = f64>, T: Data<Elem = f64>>(
+    y: &ArrayBase<S, Ix2>,
+    t: &ArrayBase<T, Ix2>,
+) -> f64 {
     let argmax = |x: &ArrayView1<f64>| {
         let mut i = 0;
         assert!(x.len() > 0);

@@ -6,5 +6,4 @@ extern crate rand;
 pub mod functions;
 pub mod layer;
 pub mod mnist;
-pub mod two_layer_net;
 pub mod utils;

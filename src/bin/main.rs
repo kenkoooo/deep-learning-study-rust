@@ -5,7 +5,6 @@ extern crate rand;
 
 use deep_learning_study_rust::functions::*;
 use deep_learning_study_rust::mnist;
-use deep_learning_study_rust::two_layer_net::{Gradient, TwoLayerNetInterface};
 use deep_learning_study_rust::utils::{choice, ArrayChoiceCopy};
 
 use ndarray::prelude::*;
@@ -72,9 +71,16 @@ impl TwoLayerNet {
             b2: Array::zeros(output_size),
         }
     }
-}
 
-impl TwoLayerNetInterface for TwoLayerNet {
+    fn accuracy<S: ndarray::Data<Elem = f64>, T: ndarray::Data<Elem = f64>>(
+        &mut self,
+        x: &ArrayBase<S, Ix2>,
+        t: &ArrayBase<T, Ix2>,
+    ) -> f64 {
+        let y = self.predict(x);
+        accuracy(&y, t)
+    }
+
     fn loss<S: ndarray::Data<Elem = f64>>(
         &mut self,
         x: &ArrayBase<S, Ix2>,
@@ -99,7 +105,7 @@ impl TwoLayerNetInterface for TwoLayerNet {
         &mut self,
         x: &ArrayBase<S, Ix2>,
         t: &ArrayBase<S, Ix2>,
-    ) -> Gradient {
+    ) -> TwoLayerNet {
         let batch_num = x.shape()[0];
 
         // forward
@@ -118,7 +124,7 @@ impl TwoLayerNetInterface for TwoLayerNet {
         let g_w1 = x.t().dot(&da1);
         let g_b1 = da1.sum_axis(Axis(0));
 
-        Gradient {
+        TwoLayerNet {
             b1: g_b1,
             b2: g_b2,
             w1: g_w1,

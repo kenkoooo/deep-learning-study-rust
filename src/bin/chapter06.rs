@@ -5,7 +5,6 @@ extern crate rand;
 
 use deep_learning_study_rust::functions::accuracy;
 use deep_learning_study_rust::layer;
-use deep_learning_study_rust::layer::{AddLayer, MulLayer};
 use deep_learning_study_rust::mnist;
 use deep_learning_study_rust::utils::*;
 
@@ -14,54 +13,9 @@ use ndarray_rand::RandomExt;
 use rand::distributions::Normal;
 use rand::thread_rng;
 
+struct SGD {}
+
 fn main() {
-    let apple = 100.0;
-    let apple_num = 2.0;
-    let tax = 1.1;
-
-    let mut mul_apple_layer = MulLayer::new();
-    let mut mul_tax_layer = MulLayer::new();
-
-    // forward
-    let apple_price = mul_apple_layer.forward(apple, apple_num);
-    let price = mul_tax_layer.forward(apple_price, tax);
-
-    println!("{}", price);
-
-    let d_price = 1.0;
-    let (d_apple_price, d_tax) = mul_tax_layer.backward(d_price);
-    let (d_apple, d_apple_num) = mul_apple_layer.backward(d_apple_price);
-
-    println!("{} {} {}", d_apple, d_apple_num, d_tax);
-
-    let apple = 100.0;
-    let apple_num = 2.0;
-    let orange = 150.0;
-    let orange_num = 3.0;
-    let tax = 1.1;
-
-    let mut mul_apple_layer = MulLayer::new();
-    let mut mul_orange_layer = MulLayer::new();
-    let add_apple_orange_layer = AddLayer::new();
-    let mut mul_tax_layer = MulLayer::new();
-
-    let apple_price = mul_apple_layer.forward(apple, apple_num);
-    let orange_price = mul_orange_layer.forward(orange, orange_num);
-    let all_price = add_apple_orange_layer.forward(apple_price, orange_price);
-    let price = mul_tax_layer.forward(all_price, tax);
-
-    let d_price = 1.0;
-    let (d_all_price, d_tax) = mul_tax_layer.backward(d_price);
-    let (d_apple_price, d_orange_price) = add_apple_orange_layer.backward(d_all_price);
-    let (d_orange, d_orange_num) = mul_orange_layer.backward(d_orange_price);
-    let (d_apple, d_apple_num) = mul_apple_layer.backward(d_apple_price);
-
-    println!("{}", price);
-    println!(
-        "{} {} {} {} {}",
-        d_apple_num, d_apple, d_orange, d_orange_num, d_tax
-    );
-
     let (x_train, t_train, x_test, t_test) = mnist::load_data().unwrap();
 
     let mut network = TwoLayerNet::new(784, 50, 10, 0.01);
@@ -103,6 +57,13 @@ struct TwoLayerNet {
     relu1: layer::Relu,
     affine2: layer::Affine,
     last_layer: layer::SoftmaxWithLoss,
+}
+
+struct Grad {
+    w1: Array2<f64>,
+    b1: Array1<f64>,
+    w2: Array2<f64>,
+    b2: Array1<f64>,
 }
 
 impl TwoLayerNet {
@@ -180,11 +141,4 @@ impl TwoLayerNet {
             b2: &self.affine2.db * 1.0,
         }
     }
-}
-
-struct Grad {
-    w1: Array2<f64>,
-    b1: Array1<f64>,
-    w2: Array2<f64>,
-    b2: Array1<f64>,
 }
