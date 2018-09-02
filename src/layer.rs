@@ -135,7 +135,6 @@ impl Affine {
 
 pub struct SoftmaxWithLoss {
     y: ArrayBase<OwnedRepr<f64>, Ix2>,
-    t: ArrayBase<OwnedRepr<f64>, Ix2>,
     loss: f64,
 }
 
@@ -143,23 +142,23 @@ impl SoftmaxWithLoss {
     pub fn new() -> Self {
         SoftmaxWithLoss {
             y: Array::zeros((0, 0)),
-            t: Array::zeros((0, 0)),
             loss: 0.0,
         }
     }
     pub fn forward<S: Data<Elem = f64> + DataMut, T: Data<Elem = f64>>(
         &mut self,
         x: &ArrayBase<S, Ix2>,
-        t: &ArrayBase<T, Ix2>,
+        label: &ArrayBase<T, Ix2>,
     ) -> f64 {
-        self.t = Array::zeros(t.raw_dim());
-        self.t.assign(t);
         self.y = softmax(x);
-        self.loss = cross_entropy_error(&self.y, &self.t);
+        self.loss = cross_entropy_error(&self.y, label);
         self.loss
     }
 
-    pub fn backward(&mut self) -> ArrayBase<OwnedRepr<f64>, Ix2> {
-        (&self.y - &self.t) / self.t.shape()[0] as f64
+    pub fn backward<T: Data<Elem = f64>>(
+        &mut self,
+        label: &ArrayBase<T, Ix2>,
+    ) -> ArrayBase<OwnedRepr<f64>, Ix2> {
+        (&self.y - label) / label.shape()[0] as f64
     }
 }

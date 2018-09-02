@@ -1,7 +1,7 @@
 use std::cmp;
 use std::collections::BTreeSet;
 
-use ndarray::{Array, ArrayBase, Data, Ix2, OwnedRepr};
+use ndarray::{Array, ArrayBase, Data, Dimension, Ix2, OwnedRepr};
 use rand::Rng;
 
 pub trait ArrayChoiceCopy<S> {
@@ -45,5 +45,23 @@ pub fn choice<R: Rng>(rng: &mut R, from_size: usize, choice_size: usize) -> Vec<
             }
         }
         result
+    }
+}
+
+pub trait ArrayFunctions<D> {
+    fn sqrt(&self) -> Array<f64, D>;
+    fn powi(&self, i: i32) -> Array<f64, D>;
+}
+
+impl<D> ArrayFunctions<D> for Array<f64, D>
+where
+    D: Dimension,
+{
+    fn sqrt(&self) -> Array<f64, D> {
+        self.mapv(f64::sqrt)
+    }
+
+    fn powi(&self, i: i32) -> Array<f64, D> {
+        self.mapv(|t| t.powi(i))
     }
 }

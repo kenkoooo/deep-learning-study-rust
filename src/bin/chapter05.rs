@@ -168,7 +168,7 @@ impl TwoLayerNet {
         self.loss(x, t);
 
         // backward
-        let d_out = self.last_layer.backward();
+        let d_out = self.last_layer.backward(t);
         let d_out = self.affine2.backward(&self.w2, &d_out);
         let d_out = self.relu1.backward(&d_out);
         self.affine1.backward(&self.w1, &d_out);
